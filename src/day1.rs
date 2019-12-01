@@ -1,5 +1,5 @@
-mod puzzle;
 
+#[aoc_generator(day1)]
 fn parse_input(input: &str) -> Vec<i32> {    
     let ret = input.split("\n").map(|token| token.parse::<i32>().unwrap()).collect();
     ret
@@ -25,15 +25,16 @@ fn calculate_fuel_2(mass: &i32) -> i32 {
     ret
 }
 
-fn main() {
-    let input = parse_input(puzzle::INPUT);
-
+#[aoc(day1, part1)]
+fn solve_part1(input: &Vec<i32>) -> i32 {
     let answer: i32 = input.iter().map(calculate_fuel).sum();
-    println!("Answer 1: {}", answer);
+    answer
+}
 
+#[aoc(day1, part2)]
+fn solve_part2(input: &Vec<i32>) -> i32 {
     let answer2: i32 = input.iter().map(calculate_fuel_2).sum();
-    println!("Answer 2: {}", answer2);
-
+    answer2
 }
 
 #[test]
