@@ -51,8 +51,15 @@ fn parse_input(input: &str) -> Vec<Operations> {
 #[aoc(day3, part1)]
 fn find_solution1(wires: &Vec<Operations>) -> isize {
     let intersections = cross_wires(wires);
-    let calc_dist = calculate_distance(intersections);
+    let calc_dist = calculate_distance(&intersections);
     calc_dist
+}
+
+#[aoc(day3, part2)]
+fn find_solution2(wires: &Vec<Operations>) -> isize {
+    let intersections = cross_wires(wires);
+    let calc_steps = calculate_steps(&intersections, &wires);
+    calc_steps
 }
 
 fn cross_wires(wires: &Vec<Operations>) -> Intersections {
@@ -81,11 +88,11 @@ fn cross_wires(wires: &Vec<Operations>) -> Intersections {
     intersections
 }
 
-fn calculate_distance(intersections: Intersections) -> isize {
+fn calculate_distance(intersections: &Intersections) -> isize {
     let mut smallest = std::isize::MAX;
     
     for (key, value) in intersections {
-        if value > 1 {
+        if *value > 1 {
             let dist;
             dist = key.0.abs() + key.1.abs();
             if dist < smallest {
@@ -96,14 +103,45 @@ fn calculate_distance(intersections: Intersections) -> isize {
     smallest
 }
 
+fn calculate_steps(intersections: &Intersections, wires: &Vec<Operations>) -> isize {
+    let mut smallest_steps = std::isize::MAX;
+    let mut steps_map = Intersections::new();
+
+    for ops in wires {
+        let mut steps = 0;
+        let mut initial_pos = (0, 0);
+        for op in ops {
+            let positions = op(initial_pos);
+            for pos in positions {
+                initial_pos = pos;
+                steps += 1;
+                if intersections.contains_key(&pos) {
+                    if *intersections.get(&pos).unwrap() > 1 {
+                        *steps_map.entry(pos).or_insert(0) += steps;
+                    }    
+                }
+            }
+        } 
+    }
+
+    for (_, steps) in steps_map {
+        if steps < smallest_steps  {
+            smallest_steps = steps;
+        }
+    }
+    smallest_steps
+}
+
 #[test]
 fn test1() {
     let input = "R75,D30,R83,U83,L12,D49,R71,U7,L72\nU62,R66,U55,R34,D71,R55,D58,R83";
     let distance = 159;
     let parsed = parse_input(input);
     let intersections = cross_wires(&parsed);
-    let calc_dist = calculate_distance(intersections);
+    let calc_dist = calculate_distance(&intersections);
     assert_eq!(distance, calc_dist);
+    let steps = calculate_steps(&intersections, &parsed);
+    assert_eq!(610, steps);
 }
 
 #[test]
@@ -112,8 +150,10 @@ fn test2() {
     let distance = 135;
     let parsed = parse_input(input);
     let intersections = cross_wires(&parsed);
-    let calc_dist = calculate_distance(intersections);
+    let calc_dist = calculate_distance(&intersections);
     assert_eq!(distance, calc_dist);
+    let steps = calculate_steps(&intersections, &parsed);
+    assert_eq!(410, steps);
 }
 
 #[test]
