@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use crate::intcode::run_intcode;
 
 #[aoc_generator(day11)]
 fn parse_input(input: &str) -> Vec<i128> {    
@@ -13,7 +14,7 @@ fn find_solution1(input: &Vec<i128>) -> usize {
 }
 
 
-#[aoc(day11, part2)]
+/*#[aoc(day11, part2)]
 fn find_solution2(input: &Vec<i128>) -> usize {
     let output = run_program(&mut input.clone(), 1);
     for i in -100i128..100i128 {
@@ -28,7 +29,7 @@ fn find_solution2(input: &Vec<i128>) -> usize {
         println!();
     }
     0
-}
+}*/
 
 fn run_program(input: &mut Vec<i128>, mut prog_input: i128) -> HashMap<(i128, i128), i128> {
     let mut relative_base = 0i128;
@@ -118,6 +119,12 @@ fn run_program(input: &mut Vec<i128>, mut prog_input: i128) -> HashMap<(i128, i1
         }        
 
         if opcode == 3 {
+            println!("Opcode: {} dirx: {} diry: {} posx: {} posy: {} positions: {:?}", 
+            input[i], dirx, diry, posx, posy, positions);
+            if positions.len() > 6 {
+                panic!();
+            }
+    
             if input_consumed {
                 assert_eq!(output.len(), 2);
                 *positions.entry((posx, posy)).or_insert(0i128) = output[0];

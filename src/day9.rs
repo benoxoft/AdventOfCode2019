@@ -114,7 +114,7 @@ fn run_program(input: &mut Vec<i128>, prog_input: i128) -> (Vec<i128>, Vec<i128>
         // println!("strop{} i {} pos1 {} pos2 {} pos3 {} store {} rb {}", strop, i, pos1, pos2, pos3, store, relative_base);
 
         if opcode == 3 {
-            println!("USES INPUT {} AS INPUT", prog_input);
+            println!("USES INPUT {} AS INPUT {}", prog_input, relative_base);
             if mode1 == '2' {
                 input[(pos1 + relative_base) as usize] = prog_input;
             } else {
