@@ -1,16 +1,74 @@
 use std::collections::HashMap;
-use crate::intcode::run_intcode;
+use crate::intcode::{run_intcode, InputGenerator, OutputHandler};
+use std::sync::Mutex;
 
 #[aoc_generator(day11)]
-fn parse_input(input: &str) -> Vec<i128> {    
-    let ret = input.split(",").map(|token| token.parse::<i128>().unwrap()).collect();
+fn parse_input(input: &str) -> Vec<i64> {    
+    let ret = input.split(",").map(|token| token.parse::<i64>().unwrap()).collect();
     ret
 }
 
+fn change_dir(change: i64, dir: (i64, i64)) -> (i64, i64) {
+    if change == 0 {
+        match dir {
+            (1, 0) => (0, 1),
+            (0, 1) => (-1, 0),
+            (-1, 0) => (0, -1),
+            (0, -1) => (1, 0),
+            _ => panic!("Unknown direction!")
+        }
+    } else if change == 1 {
+        match dir {
+            (1, 0) => (0, -1),
+            (0, -1) => (-1, 0),
+            (-1, 0) => (0, 1),
+            (0, 1) => (1, 0),
+            _ => panic!("Unknown direction!")
+        }
+    } else {
+        panic!("Unknown direction!");
+    }
+}
+
+
 #[aoc(day11, part1)]
-fn find_solution1(input: &Vec<i128>) -> usize {
-    let output = run_program(&mut input.clone(), 0);
-    output.len()
+fn find_solution1(input: &Vec<i64>) -> usize {
+
+    lazy_static! { 
+        static ref positions: Mutex<HashMap<(i64, i64), i64>> = Mutex::new(HashMap::new());
+    }
+
+    static mut pos: (i64, i64) = (0, 0);
+    static mut dir: (i64, i64) = (0, 1);
+    static mut flip: bool = false;
+
+    let mut program = input.clone();
+
+    positions.lock().unwrap().insert((0i64, 0i64), 0i64);
+
+    unsafe {
+        let ig = || -> InputGenerator {
+            Box::new(|| {
+                *positions.lock().unwrap().get(&pos).unwrap_or(&0i64)
+            })
+        };
+        
+        let oh = || -> OutputHandler {
+            Box::new(|o: i64| {
+                if flip {
+                    dir = change_dir(o, dir);
+                    pos.0 += dir.0;
+                    pos.1 += dir.1;
+                } else {
+                    *positions.lock().unwrap().entry(pos).or_insert(0i64) = o;
+                }
+                flip = !flip
+            })
+        };
+        run_intcode(&mut input.clone(), &ig(), &oh());        
+    }
+    positions.lock().unwrap().len()    
+
 }
 
 

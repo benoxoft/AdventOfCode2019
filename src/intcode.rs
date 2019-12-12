@@ -65,7 +65,6 @@ fn run_opcode_mult(program: &mut Program, index: usize, relbase: i64) -> usize {
 fn run_opcode_input(program: &mut Program, index: usize, relbase: i64, input: &InputGenerator) -> usize {
     let param1 = get_address_1(program, index, relbase) as usize;
     let mode = parse_mode(program[index], ParamPos::Param1);
-    println!("{} {} {} {} {:?}", program[index], program[index+1], relbase, param1, mode);
 
     check_resize(program, param1);
     program[param1] = input();
@@ -74,7 +73,6 @@ fn run_opcode_input(program: &mut Program, index: usize, relbase: i64, input: &I
 
 fn run_opcode_output(program: &mut Program, index: usize, relbase: i64, output: &OutputHandler) -> usize {
     let param1 = get_parameter_1(program, index, relbase);
-    println!("OUTPUT {}", param1);
     output(param1);
     index + 2
 }
