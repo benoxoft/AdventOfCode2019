@@ -8,7 +8,7 @@ pub fn ZeroInputGenerator() -> InputGenerator {
 }
 
 pub fn NullHandler() -> OutputHandler {
-    Box::new(|output: i64| ())
+    Box::new(|_: i64| ())
 }
 
 enum Opcodes {
@@ -64,7 +64,6 @@ fn run_opcode_mult(program: &mut Program, index: usize, relbase: i64) -> usize {
 
 fn run_opcode_input(program: &mut Program, index: usize, relbase: i64, input: &InputGenerator) -> usize {
     let param1 = get_address_1(program, index, relbase) as usize;
-    let mode = parse_mode(program[index], ParamPos::Param1);
 
     check_resize(program, param1);
     program[param1] = input();

@@ -1,7 +1,7 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::intcode::{run_intcode, ZeroInputGenerator, NullHandler, InputGenerator, OutputHandler, Program};
+    use crate::intcode::{run_intcode, ZeroInputGenerator, NullHandler, InputGenerator, OutputHandler};
 
     #[test]
     fn test_intcode_basic1() {
