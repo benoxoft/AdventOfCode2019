@@ -3,11 +3,11 @@ pub type InputGenerator = Box<dyn Fn()-> i64>;
 pub type OutputHandler = Box<dyn Fn(i64)>;
 
 // Helper functions to plug in IO when it's not needed
-pub fn ZeroInputGenerator() -> InputGenerator {
+pub fn zero_input_generator() -> InputGenerator {
     Box::new(|| 0)
 }
 
-pub fn NullHandler() -> OutputHandler {
+pub fn null_handler() -> OutputHandler {
     Box::new(|_: i64| ())
 }
 

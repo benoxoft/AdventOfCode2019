@@ -1,13 +1,13 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::intcode::{run_intcode, ZeroInputGenerator, NullHandler, InputGenerator, OutputHandler};
+    use crate::intcode::{run_intcode, zero_input_generator, null_handler, InputGenerator, OutputHandler};
 
     #[test]
     fn test_intcode_basic1() {
         let mut program1 = vec![1, 0, 0, 0, 99];
         let result1 = vec![2, 0, 0, 0, 99];
-        run_intcode(&mut program1, &ZeroInputGenerator(), &NullHandler());
+        run_intcode(&mut program1, &zero_input_generator(), &null_handler());
         assert_eq!(result1, program1);
     }
     
@@ -15,7 +15,7 @@ mod tests {
     fn test_intcode_basic2() {
         let mut program2 = vec![2, 3, 0, 3, 99];
         let result2 = vec![2, 3, 0, 6, 99];
-        run_intcode(&mut program2, &ZeroInputGenerator(), &NullHandler());
+        run_intcode(&mut program2, &zero_input_generator(), &null_handler());
         assert_eq!(result2, program2);
     }
 
@@ -23,7 +23,7 @@ mod tests {
     fn test_intcode_basic3() {
         let mut program3 = vec![2, 4, 4, 5, 99, 0];
         let result3 = vec![2, 4, 4, 5, 99, 9801];
-        run_intcode(&mut program3, &ZeroInputGenerator(), &NullHandler());
+        run_intcode(&mut program3, &zero_input_generator(), &null_handler());
         assert_eq!(result3, program3);
     }
 
@@ -31,7 +31,7 @@ mod tests {
     fn test_intcode_basic4() {
         let mut program4 = vec![1, 1, 1, 4, 99, 5, 6, 0, 99];
         let result4 = vec![30, 1, 1, 4, 2, 5, 6, 0, 99];
-        run_intcode(&mut program4, &ZeroInputGenerator(), &NullHandler());
+        run_intcode(&mut program4, &zero_input_generator(), &null_handler());
         assert_eq!(result4, program4);
     }
 
@@ -53,7 +53,7 @@ mod tests {
         run_intcode(&mut program1, &test_ig(), &test_oh());
 
         let mut program2 = vec![1101,100,-1,4,0];
-        run_intcode(&mut program2, &test_ig(), &NullHandler());    
+        run_intcode(&mut program2, &test_ig(), &null_handler());    
     }
 
     #[test]
@@ -206,7 +206,7 @@ mod tests {
                     OUTPUT.push(o);                
                 })
             };
-            run_intcode(&mut program.clone(), &ZeroInputGenerator(), &test_oh());    
+            run_intcode(&mut program.clone(), &zero_input_generator(), &test_oh());    
             assert_eq!(OUTPUT, program);
         }
     }
