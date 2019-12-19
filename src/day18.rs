@@ -2,12 +2,15 @@ use leemaze::{AllowedMoves2D, boolify_2d_maze, maze_directions2d};
 use std::collections::HashMap;
 use std::sync::Mutex;
 use threadpool::ThreadPool;
+use rand::thread_rng;
+use rand::seq::SliceRandom;
+use std::{thread, time};
+use rand::Rng;
 
 type Maze = Vec<Vec<bool>>;
 type Doors = HashMap<char, (usize, usize)>;
 type Keys = HashMap<(usize, usize), char>;
 type Pos = (usize, usize);
-type Moves = Mutex<HashMap<((usize, usize), (usize, usize)), (usize, Vec<char>)>>;
 
 //#[aoc_generator(day18)]
 fn parse_input(input: &str) -> (Maze, Vec<Pos>, Doors, Keys) {
@@ -49,7 +52,9 @@ fn parse_input(input: &str) -> (Maze, Vec<Pos>, Doors, Keys) {
 #[aoc(day18, part1)]
 fn find_solution1(input: &str) -> usize {
     //test_example3();
-    find_smallest_path(input)
+    //find_smallest_path(input)
+    find_smallest_steps(input);
+    0
 }
 
 /*
@@ -103,10 +108,94 @@ fn test_example3() {
 
 }
 
+fn test_part2_example1() {
+    let input = "#######
+#@.#Cd#
+##.#@##
+#######
+##@#@##
+#cB#.b#
+#######";
+
+
+}
+
+fn find_smallest_steps(input: &str) {
+    lazy_static! {
+        static ref final_score: Mutex<usize> = Mutex::new(0);
+        static ref found_keys: Mutex<Vec<char>> = Mutex::new(Vec::new());
+        static ref current_maze: Mutex<Vec<Vec<bool>>> = Mutex::new(Vec::new());
+    }
+
+    let (maze, init_pos, doors, keys) = parse_input(input);
+    *current_maze.lock().unwrap() = maze.clone();
+
+    let pool = ThreadPool::new(init_pos.len());
+    let mut rng = rand::thread_rng();
+
+    let mut smallest = 2414;
+    loop {
+        let mut new_init_pos = init_pos.clone();
+        new_init_pos.shuffle(&mut thread_rng());
+        for robot in new_init_pos.clone() {
+            let new_keys = keys.clone();
+            let new_doors = doors.clone();
+            pool.execute(move || explore_maze2(&current_maze, robot.clone(), &new_doors, new_keys, &final_score, &found_keys));
+            let ten_millis = time::Duration::from_millis(rng.gen_range(0, 3));
+            thread::sleep(ten_millis);
+
+        }
+        pool.join();
+        if *final_score.lock().unwrap() < smallest {
+            smallest = *final_score.lock().unwrap();
+            println!("current smallest value: {}", smallest);
+        }
+        *final_score.lock().unwrap() = 0;
+        found_keys.lock().unwrap().clear();
+        *current_maze.lock().unwrap() = maze.clone();
+    }
+}
+
+fn explore_maze2(maze: &Mutex<Maze>, mut current_pos: Pos, doors: &Doors, keys: Keys, final_score: &Mutex<usize>, found_keys: &Mutex<Vec<char>>) {
+    let mut rng = rand::thread_rng();
+    loop {
+        for (pos, key) in keys.iter() {
+            let ten_millis = time::Duration::from_millis(rng.gen_range(0, 3));
+            thread::sleep(ten_millis);
+            if found_keys.lock().unwrap().contains(key) {
+                continue;
+            }
+            let road = lookup_new_road(&(*maze.lock().unwrap()), &current_pos, pos);
+            match road {
+                Some(road_len) => {
+                    match doors.get(&key) {
+                        Some(door_pos) => {
+                            let mut guarded_maze = maze.lock().unwrap();
+                            guarded_maze[door_pos.1][door_pos.0] = !guarded_maze[door_pos.1][door_pos.0];
+                            drop(guarded_maze);
+                            found_keys.lock().unwrap().push(*key);
+                            current_pos = pos.clone();
+                            *final_score.lock().unwrap() += road_len;
+                            let ten_millis = time::Duration::from_millis(rng.gen_range(0, 3));
+                            thread::sleep(ten_millis);                
+                        }
+                        None => ()
+                    }
+                },
+                None => continue
+            }
+        }
+    
+        if found_keys.lock().unwrap().len() == keys.len() {
+            return;
+        }    
+    }
+}
+
 fn find_smallest_path(input: &str) -> usize {
     lazy_static! {
-        static ref final_score: Mutex<usize> = Mutex::new(3274);
-        static ref moves: Moves = Mutex::new(HashMap::new());
+        static ref final_score: Mutex<usize> = Mutex::new(std::u32::MAX as usize);
+        static ref found_keys: Mutex<Vec<char>> = Mutex::new(Vec::new());
     }
 
     let (maze, init_pos, doors, keys) = parse_input(input);
@@ -133,25 +222,10 @@ fn find_smallest_path(input: &str) -> usize {
         path.push(key.clone());
         let new_keys = keys.clone();
         let new_doors = doors.clone();
-        pool.execute(move || explore_maze(new_maze, pos.clone(), &new_doors, new_keys, road_len, &final_score, path, &moves));
+        pool.execute(move || explore_maze(new_maze, pos.clone(), &new_doors, new_keys, road_len, &final_score, path, &found_keys));
     }
     pool.join();
     *final_score.lock().unwrap()
-}
-
-fn lookup_traveled_roads(current_pos: &Pos, pos: &Pos, moves: &Moves, path: &Vec<char>) -> Option<usize> {
-    match moves.lock().unwrap().get(&(*current_pos, *pos)) {
-        Some(mov) => {
-            let needed_keys = &mov.1;
-            for needed_key in needed_keys {
-                if !path.contains(needed_key) {
-                    return None;
-                }
-            }
-            Some(mov.0)
-        },
-        None => None
-    }
 }
 
 fn lookup_new_road(maze: &Maze, current_pos: &Pos, pos: &Pos) -> Option<usize> {
@@ -162,7 +236,7 @@ fn lookup_new_road(maze: &Maze, current_pos: &Pos, pos: &Pos) -> Option<usize> {
     }        
 }
 
-fn explore_maze(maze: Maze, current_pos: Pos, doors: &Doors, keys: Keys, score: usize, final_score: &Mutex<usize>, path: Vec<char>, moves: &Moves) {
+fn explore_maze(maze: Maze, current_pos: Pos, doors: &Doors, keys: Keys, score: usize, final_score: &Mutex<usize>, path: Vec<char>, found_keys: &Mutex<Vec<char>>) {
     let mut choices = Vec::new();
 
     if *final_score.lock().unwrap() <= score {
@@ -174,21 +248,15 @@ fn explore_maze(maze: Maze, current_pos: Pos, doors: &Doors, keys: Keys, score: 
         if path.contains(key) {
             continue;
         }
-        //let traveled = lookup_traveled_roads(&current_pos, pos, moves, &path);
-        //match traveled {
-          //  Some(road_len) => choices.push((pos, key, road_len)),
-            //None => {
-                match lookup_new_road(&maze, &current_pos, pos) {
-                    Some(road_len) => {
-                        if *final_score.lock().unwrap() <= score + road_len {
-                            return;
-                        }
-                        choices.push((pos, key, road_len));
-                    },
-                    None => continue
+        match lookup_new_road(&maze, &current_pos, pos) {
+            Some(road_len) => {
+                if *final_score.lock().unwrap() <= score + road_len {
+                    return;
                 }
-         //   }
-        //}
+                choices.push((pos, key, road_len));
+            },
+            None => continue
+        }
     }
 
     choices.sort_by(|a, b| a.2.cmp(&b.2));
@@ -204,7 +272,7 @@ fn explore_maze(maze: Maze, current_pos: Pos, doors: &Doors, keys: Keys, score: 
         let mut new_path = path.clone();                
         new_path.push(*key);
         let new_keys = keys.clone();
-        explore_maze(new_maze, *pos, doors, new_keys, score + road_len, final_score, new_path, moves);
+        explore_maze(new_maze, *pos, doors, new_keys, score + road_len, final_score, new_path, found_keys);
     }
 
     if keys.len() == path.len() && score < *final_score.lock().unwrap() {
