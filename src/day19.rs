@@ -34,9 +34,9 @@ fn find_solution1(input: &Vec<i64>) -> i64 {
                 output[posy as usize].push(o);
             })
         };
-        for i in 0..100000 {
+        for i in 0..10000 {
             posy = i;
-            for j in 0..100000 {
+            for j in 0..10000 {
                 posx = j;
                 //println!("checking position {} {}", posx, posy);
                 run_intcode(&mut program.clone(), &ig(), &oh());    

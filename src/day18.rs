@@ -52,9 +52,9 @@ fn parse_input(input: &str) -> (Maze, Vec<Pos>, Doors, Keys) {
 #[aoc(day18, part1)]
 fn find_solution1(input: &str) -> usize {
     //test_example3();
-    //find_smallest_path(input)
-    find_smallest_steps(input);
-    0
+    find_smallest_path(input)
+    //find_smallest_steps(input);
+    
 }
 
 /*
@@ -133,7 +133,7 @@ fn find_smallest_steps(input: &str) {
     let pool = ThreadPool::new(init_pos.len());
     let mut rng = rand::thread_rng();
 
-    let mut smallest = 2414;
+    let mut smallest = 1697;
     loop {
         let mut new_init_pos = init_pos.clone();
         new_init_pos.shuffle(&mut thread_rng());
@@ -194,7 +194,7 @@ fn explore_maze2(maze: &Mutex<Maze>, mut current_pos: Pos, doors: &Doors, keys: 
 
 fn find_smallest_path(input: &str) -> usize {
     lazy_static! {
-        static ref final_score: Mutex<usize> = Mutex::new(std::u32::MAX as usize);
+        static ref final_score: Mutex<usize> = Mutex::new(1697);
         static ref found_keys: Mutex<Vec<char>> = Mutex::new(Vec::new());
     }
 
@@ -204,17 +204,21 @@ fn find_smallest_path(input: &str) -> usize {
     let mut choices = Vec::new();
 
     for (pos, key) in keys.clone() {
-        match maze_directions2d(&maze, &allowed_moves, &init_pos[0], &pos) {
-            Some(road) => {
-                choices.push((pos, key, road.len()));
-            },
-            None => continue
-
+        for i in 0..init_pos.len() {
+            match maze_directions2d(&maze, &allowed_moves, &init_pos[i], &pos) {
+                Some(road) => {
+                    let mut new_init_pos = init_pos.clone();
+                    new_init_pos[i] = pos;
+                    choices.push((new_init_pos, key, road.len()));
+                },
+                None => continue
+    
+            }    
         }
     }
     let pool = ThreadPool::new(choices.len());
 
-    for (pos, key, road_len) in choices {
+    for (new_init_pos, key, road_len) in choices {
         let mut path = Vec::new();
         let mut new_maze = maze.clone();
         let door_pos = &doors.get(&key).unwrap();
@@ -222,7 +226,7 @@ fn find_smallest_path(input: &str) -> usize {
         path.push(key.clone());
         let new_keys = keys.clone();
         let new_doors = doors.clone();
-        pool.execute(move || explore_maze(new_maze, pos.clone(), &new_doors, new_keys, road_len, &final_score, path, &found_keys));
+        pool.execute(move || explore_maze(new_maze, new_init_pos, &new_doors, new_keys, road_len, &final_score, path, &found_keys));
     }
     pool.join();
     *final_score.lock().unwrap()
@@ -236,32 +240,41 @@ fn lookup_new_road(maze: &Maze, current_pos: &Pos, pos: &Pos) -> Option<usize> {
     }        
 }
 
-fn explore_maze(maze: Maze, current_pos: Pos, doors: &Doors, keys: Keys, score: usize, final_score: &Mutex<usize>, path: Vec<char>, found_keys: &Mutex<Vec<char>>) {
+fn explore_maze(maze: Maze, current_positions: Vec<Pos>, doors: &Doors, keys: Keys, score: usize, final_score: &Mutex<usize>, path: Vec<char>, found_keys: &Mutex<Vec<char>>) {
     let mut choices = Vec::new();
+
+    let ten_millis = time::Duration::from_millis(10);
+    thread::sleep(ten_millis);
 
     if *final_score.lock().unwrap() <= score {
         return;
     }
 
-    for (pos, key) in keys.iter() {
-        //println!("looking for key {}", key);
-        if path.contains(key) {
-            continue;
-        }
-        match lookup_new_road(&maze, &current_pos, pos) {
-            Some(road_len) => {
-                if *final_score.lock().unwrap() <= score + road_len {
-                    return;
-                }
-                choices.push((pos, key, road_len));
-            },
-            None => continue
-        }
+    for i in 0..current_positions.len() {
+        let current_pos = current_positions[i];
+        for (pos, key) in keys.iter() {
+            //println!("looking for key {}", key);
+            if path.contains(key) {
+                continue;
+            }
+            match lookup_new_road(&maze, &current_pos, pos) {
+                Some(road_len) => {
+                    if *final_score.lock().unwrap() <= score + road_len {
+                        continue;
+                    }
+                    let mut new_init_pos = current_positions.clone();
+                    new_init_pos[i] = *pos;
+                    choices.push((new_init_pos, key, road_len));
+                },
+                None => continue
+            }
+        }    
     }
 
-    choices.sort_by(|a, b| a.2.cmp(&b.2));
+    //choices.sort_by(|a, b| a.2.cmp(&b.2));
+    choices.shuffle(&mut thread_rng());
 
-    for (pos, key, road_len) in choices {
+    for (new_init_pos, key, road_len) in choices {
         let mut new_maze = maze.clone();
         match doors.get(&key) {
             Some(door_pos) => {
@@ -272,7 +285,7 @@ fn explore_maze(maze: Maze, current_pos: Pos, doors: &Doors, keys: Keys, score: 
         let mut new_path = path.clone();                
         new_path.push(*key);
         let new_keys = keys.clone();
-        explore_maze(new_maze, *pos, doors, new_keys, score + road_len, final_score, new_path, found_keys);
+        explore_maze(new_maze, new_init_pos, doors, new_keys, score + road_len, final_score, new_path, found_keys);
     }
 
     if keys.len() == path.len() && score < *final_score.lock().unwrap() {
